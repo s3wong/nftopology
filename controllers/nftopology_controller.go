@@ -17,20 +17,21 @@ limitations under the License.
 package controllers
 
 import (
-	"context"
+    "context"
 
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	//deployv1alpha1 "github.com/s3wong/api/nf_deployments/v1alpha1"
-	reqv1alpha1 "github.com/s3wong/api/nf_requirements/v1alpha1"
+    "k8s.io/apimachinery/pkg/runtime"
+    ctrl "sigs.k8s.io/controller-runtime"
+    "sigs.k8s.io/controller-runtime/pkg/client"
+    "sigs.k8s.io/controller-runtime/pkg/log"
+    //deployv1alpha1 "github.com/s3wong/api/nf_deployments/v1alpha1"
+    //reqv1alpha1 "github.com/s3wong/api/nf_requirements/v1alpha1"
+    reqv1alpha1 "github.com/nephio-project/api/nf_requirements/v1alpha1"
 )
 
 // NFTopologyReconciler reconciles a NFTopology object
 type NFTopologyReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
+    client.Client
+    Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=req.nephio.org,resources=nftopologies,verbs=get;list;watch;create;update;patch;delete
@@ -47,17 +48,17 @@ type NFTopologyReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *NFTopologyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+    _ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
+    // TODO(user): your logic here
 
-	return ctrl.Result{}, nil
+    return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NFTopologyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
-		For(&reqv1alpha1.NFTopology{}).
-		Complete(r)
+    return ctrl.NewControllerManagedBy(mgr).
+        // Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
+        For(&reqv1alpha1.NFTopology{}).
+        Complete(r)
 }
