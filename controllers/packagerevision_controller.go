@@ -99,7 +99,7 @@ func BuildNeighbormap(attachmentMap map[string][]string) map[string][]string {
 
 func BuildNFDeployed(nfDeployedName string, topoNamespace string, nfTopo *nfreqv1alpha1.NFTopology, nfInstance *nfreqv1alpha1.NFInstance, clusterName string, vendor string, version string, nfdeployed *nfdeployv1alpha1.NFDeployed) error {
 	//var nfdeployedInstance *nfdeployv1alpha1.NFDeployedInstance = nil
-    nfdeployedIdx := -1
+	nfdeployedIdx := -1
 
 	for idx, nfInst := range nfdeployed.Spec.NFInstances {
 		if nfInst.Id == nfDeployedName {
@@ -117,7 +117,7 @@ func BuildNFDeployed(nfDeployedName string, topoNamespace string, nfTopo *nfreqv
 		nfdeployedInst.NFVendor = vendor
 		nfdeployedInst.NFVersion = version
 		nfdeployed.Spec.NFInstances = append(nfdeployed.Spec.NFInstances, nfdeployedInst)
-		nfdeployedIdx = len(nfdeployed.Spec.NFInstances)-1
+		nfdeployedIdx = len(nfdeployed.Spec.NFInstances) - 1
 	}
 
 	neighborMap := BuildNeighbormap(BuildAttachmentMap(nfTopo))
@@ -147,18 +147,18 @@ func BuildNFDeployed(nfDeployedName string, topoNamespace string, nfTopo *nfreqv
 	neighborSlice, _ := neighborMap[instName]
 	for _, neighbor := range neighborSlice {
 		if neighborIdx, ok := instMap[neighbor]; !ok {
-            // neighbor packagerevision object not created yet
-            continue
-        } else {
-            neighborInst := &(nfdeployed.Spec.NFInstances[neighborIdx])
-            nfdeployedInstance := &(nfdeployed.Spec.NFInstances[nfdeployedIdx])
-		    con := nfdeployv1alpha1.NFDeployedConnectivity{}
-		    con.NeighborName = neighborInst.Id
-		    nfdeployedInstance.Connectivities = append(nfdeployedInstance.Connectivities, con)
-		    neighborCon := nfdeployv1alpha1.NFDeployedConnectivity{}
-		    neighborCon.NeighborName = nfdeployedInstance.Id
-		    neighborInst.Connectivities = append(neighborInst.Connectivities, neighborCon)
-        }
+			// neighbor packagerevision object not created yet
+			continue
+		} else {
+			neighborInst := &(nfdeployed.Spec.NFInstances[neighborIdx])
+			nfdeployedInstance := &(nfdeployed.Spec.NFInstances[nfdeployedIdx])
+			con := nfdeployv1alpha1.NFDeployedConnectivity{}
+			con.NeighborName = neighborInst.Id
+			nfdeployedInstance.Connectivities = append(nfdeployedInstance.Connectivities, con)
+			neighborCon := nfdeployv1alpha1.NFDeployedConnectivity{}
+			neighborCon.NeighborName = nfdeployedInstance.Id
+			neighborInst.Connectivities = append(neighborInst.Connectivities, neighborCon)
+		}
 	}
 	return nil
 }
@@ -234,29 +234,29 @@ func (r *PackageRevisionReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if nfInstance == nil {
 		err := errors.New(fmt.Sprintf("%s not found in NF Topology %s\n", nfInstanceName, topologyName))
 		l.Error(err, fmt.Sprintf("NF Instance %s not found in NF Topology %s\n", nfInstanceName, topologyName))
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 	// Get NFClass, cluster scope
 	className := nfInstance.NFTemplate.ClassName
 	var nfClass = &nfreqv1alpha1.NFClass{}
 	if err := r.Client.Get(ctx, client.ObjectKey{Name: className}, nfClass); err != nil {
 		l.Error(err, fmt.Sprintf("NFClass object not found: %s: %s\n", className, err.Error()))
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 	if err := BuildNFDeployed(deploymentName, topoNamespace, nfTopology, nfInstance, clusterName, nfClass.Spec.Vendor, nfClass.Spec.Version, nfDeployed); err != nil {
 		l.Error(err, fmt.Sprintf("Failed to build NFDeployed %s: %s\n", deploymentName, err.Error()))
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 
 	if createDeployed {
 		if err := r.Client.Create(ctx, nfDeployed); err != nil {
 			l.Error(err, fmt.Sprintf("Failed to create NFDeployed %s: %s\n", deploymentName, err.Error()))
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, err
 		}
 	} else {
 		if err := r.Client.Update(ctx, nfDeployed); err != nil {
 			l.Error(err, fmt.Sprintf("Failed to update NFDeployed %s: %s\n", deploymentName, err.Error()))
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, err
 		}
 	}
 
