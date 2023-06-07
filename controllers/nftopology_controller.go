@@ -47,8 +47,9 @@ type NFTopologyReconciler struct {
 	l      logr.Logger
 }
 
-func AllUPFsDeployed(neighborMap map[string][]string, nfInst *reqv1alpha1.NFInstance, nfDeployed *deployv1alpha1.NFDeployed, deployedInstMap map[string]int) bool {
+func AllUPFsDeployed(neighborMap map[string][]reqv1alpha1.NFInstance, nfInst *reqv1alpha1.NFInstance, nfDeployed *deployv1alpha1.NFDeployed, deployedInstMap map[string]int) bool {
 
+	expected := 0
 	count := 0
 	if neighborList, ok := neighborMap[nfInst.Name]; !ok {
 		return false
@@ -56,7 +57,10 @@ func AllUPFsDeployed(neighborMap map[string][]string, nfInst *reqv1alpha1.NFInst
 		// create a map for fast lookup
 		neighborLookupMap := map[string]struct{}{}
 		for _, neighbor := range neighborList {
-			neighborLookupMap[neighbor] = struct{}{}
+			if neighbor.NFTemplate.NFType == reqv1alpha1.NFTypeUPF {
+				neighborLookupMap[neighbor.Name] = struct{}{}
+				expected++
+			}
 		}
 
 		for neighborInstName, idx := range deployedInstMap {
@@ -68,9 +72,19 @@ func AllUPFsDeployed(neighborMap map[string][]string, nfInst *reqv1alpha1.NFInst
 		}
 	}
 
-	return true
+	fmt.Printf("SKW: expected UPF count: %d, getting %d\n", expected, count)
+
+	if expected == count {
+		return true
+	} else {
+		return false
+	}
 }
 
+/*
+ * BuildPVS: builds a PVS object from NFTopology's NFInstance
+ * NFClass needed for package reference
+ */
 func BuildPVS(nfInst *reqv1alpha1.NFInstance, nfClassObj *reqv1alpha1.NFClass) *pvsv1alpha2.PackageVariantSet {
 	retPVS := &pvsv1alpha2.PackageVariantSet{}
 
@@ -132,6 +146,7 @@ func (r *NFTopologyReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			r.l.Error(err, fmt.Sprintf("NFClass object not found: %s: %s\n", className, err.Error()))
 			return ctrl.Result{}, err
 		}
+		// TODO(s3wong): turn the following into a configurable policy
 		if nfClass.Spec.Vendor == FREE5GC && nfInst.NFTemplate.NFType == reqv1alpha1.NFTypeSMF {
 			r.l.Info(fmt.Sprintf("NF instance free5gc %s is a SMF, checking all connected UPF deployed\n", nfInst.Name))
 			if !AllUPFsDeployed(neighborMap, &nfInst, nfDeployed, deployedInstanceMap) {
@@ -142,22 +157,22 @@ func (r *NFTopologyReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		pvs := BuildPVS(&nfInst, nfClass)
-		r.l.Info(fmt.Sprintf("PVS for NF inst %s is %+v\n", nfInst.Name, pvs))
-		if err := r.Client.Create(ctx, pvs); err != nil {
-			r.l.Error(err, fmt.Sprintf("Failed to create PVS %s: %s\n", nfInst.Name, err.Error()))
-		} else {
-			// update
-			if err := r.Client.Update(ctx, pvs); err != nil {
+		r.l.Info(fmt.Sprintf("PVS for NF inst %s is %+v\n\n\n", nfInst.Name, pvs))
+		/*
+			if err := r.Client.Create(ctx, pvs); err != nil {
 				r.l.Error(err, fmt.Sprintf("Failed to create PVS %s: %s\n", nfInst.Name, err.Error()))
-				return ctrl.Result{}, err
+			} else {
+				if err := r.Client.Update(ctx, pvs); err != nil {
+					r.l.Error(err, fmt.Sprintf("Failed to create PVS %s: %s\n", nfInst.Name, err.Error()))
+					return ctrl.Result{}, err
+				}
 			}
-		}
+		*/
 	}
 
 	if continueReconciling {
-		return ctrl.Result{}, errors.New("Waitinf for all UPF packages to be deployed before SMF")
+		return ctrl.Result{}, errors.New("Waiting for all UPF packages to be deployed before SMF")
 	} else {
-		// TODO(s3wong): turn the following into a configurable policy
 		return ctrl.Result{}, nil
 	}
 }

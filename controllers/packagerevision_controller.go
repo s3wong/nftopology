@@ -55,12 +55,12 @@ func GetNFInstanceNameFromNFDeployedName(nfDeployedName string) string {
 /*
  * BuildAttachmentMap builds a map from attachment name to a list of NFInstances (template)
  */
-func BuildAttachmentMap(nfTopo *nfreqv1alpha1.NFTopology) map[string][]string {
-	ret := make(map[string][]string)
+func BuildAttachmentMap(nfTopo *nfreqv1alpha1.NFTopology) map[string][]nfreqv1alpha1.NFInstance {
+	ret := make(map[string][]nfreqv1alpha1.NFInstance)
 	nfTopoSpec := nfTopo.Spec
 	for _, nfInst := range nfTopoSpec.NFInstances {
 		for _, nfAttachment := range nfInst.NFTemplate.NFAttachments {
-			ret[nfAttachment.NetworkInstanceName] = append(ret[nfAttachment.NetworkInstanceName], nfInst.Name)
+			ret[nfAttachment.NetworkInstanceName] = append(ret[nfAttachment.NetworkInstanceName], nfInst)
 		}
 	}
 	return ret
@@ -83,13 +83,13 @@ func BuildDeployedInstanceMap(nfDeployed *nfdeployv1alpha1.NFDeployed) map[strin
 /*
  * BuildNeighbormap builds a map of NFInstance(s) that are connected to each other
  */
-func BuildNeighbormap(attachmentMap map[string][]string) map[string][]string {
-	ret := make(map[string][]string)
+func BuildNeighbormap(attachmentMap map[string][]nfreqv1alpha1.NFInstance) map[string][]nfreqv1alpha1.NFInstance {
+	ret := make(map[string][]nfreqv1alpha1.NFInstance)
 	for _, nfInstList := range attachmentMap {
 		for _, nfInst := range nfInstList {
 			for _, neighbor := range nfInstList {
-				if nfInst != neighbor {
-					ret[nfInst] = append(ret[nfInst], neighbor)
+				if nfInst.Name != neighbor.Name {
+					ret[nfInst.Name] = append(ret[nfInst.Name], neighbor)
 				}
 			}
 		}
@@ -123,20 +123,6 @@ func BuildNFDeployed(nfDeployedName string, topoNamespace string, nfTopo *nfreqv
 	neighborMap := BuildNeighbormap(BuildAttachmentMap(nfTopo))
 	instMap := BuildDeployedInstanceMap(nfdeployed)
 
-	/*
-	   for _, nfAttachment := range nfTemplate.NFAttachments {
-	       if instList, ok := attachmentMap[nfAttachment.NetworkInstanceName]; ok {
-	           for _, instName := range instList {
-	               if instName != nfInstance.Name {
-	                   connectedInstList := nfDeployedMap[instName]
-	                   con := nfdeployv1alpha1.NFDeployedConnectivity{}
-	                   con.NeighborName = instName
-	                   nfdeployedInstance.Connectivities = append(nfdeployedInstance.Connectivities, con)
-	               }
-	           }
-	       }
-	   }
-	*/
 	// this is the continuous update case; so first build the neighbor list for this instance, then
 	// for all the connected instance(s), update by appending the neighbor list
 	/*
@@ -146,7 +132,7 @@ func BuildNFDeployed(nfDeployedName string, topoNamespace string, nfTopo *nfreqv
 	instName := GetNFInstanceNameFromNFDeployedName(nfDeployedName)
 	neighborSlice, _ := neighborMap[instName]
 	for _, neighbor := range neighborSlice {
-		if neighborIdx, ok := instMap[neighbor]; !ok {
+		if neighborIdx, ok := instMap[neighbor.Name]; !ok {
 			// neighbor packagerevision object not created yet
 			continue
 		} else {
@@ -267,5 +253,6 @@ func (r *PackageRevisionReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *PackageRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&porchv1alpha1.PackageRevision{}).
+		Owns(&nfdeployv1alpha1.NFDeployed{}).
 		Complete(r)
 }

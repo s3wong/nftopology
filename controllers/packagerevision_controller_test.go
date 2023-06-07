@@ -162,7 +162,7 @@ func TestBuildAttachmentMap(t *testing.T) {
 			t.Errorf("BuildAttachmentMap(%+v) returned %+v, expected: %+v, key %s not found", nftopo.Spec, attachmentMap, expected, key)
 		} else {
 			sort.Strings(cmpSlice)
-			sort.Strings(val)
+			//sort.Strings(val)
 			if !reflect.DeepEqual(cmpSlice, val) {
 				t.Errorf("BuildAttachmentMap(%+v) returned %+v, expected: %+v", nftopo.Spec, attachmentMap, expected)
 			}
